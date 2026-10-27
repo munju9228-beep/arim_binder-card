@@ -136,8 +136,8 @@ function renderQty(c, E) {
     const full = safeUrl(p.image), small = safeUrl(p.thumb) || full;
     h += `<article class="prod"><div class="prod-head">`;
     if (small) {
-      h += E ? `<div class="pimg"><img src="${esc(small)}" alt="" loading="lazy"><button class="upl" data-upload="products.${pi}">사진</button></div>`
-             : `<button class="pimg zoom" data-act="zoom" data-src="${esc(full || small)}" data-alt="${esc(p.name)}" aria-label="${esc(p.name)} 사진 크게 보기"><img src="${esc(small)}" alt="${esc(p.name)}" loading="lazy"></button>`;
+      h += E ? `<div class="pimg"><img src="${esc(small)}" data-fb="${esc(full)}" alt="" loading="lazy"><button class="upl" data-upload="products.${pi}">사진</button></div>`
+             : `<button class="pimg zoom" data-act="zoom" data-src="${esc(full || small)}" data-alt="${esc(p.name)}" aria-label="${esc(p.name)} 사진 크게 보기"><img src="${esc(small)}" data-fb="${esc(full)}" alt="${esc(p.name)}" loading="lazy"></button>`;
     } else {
       h += `<div class="thumb">대지<br>이미지${E ? `<button class="upl" data-upload="products.${pi}">사진</button>` : ""}</div>`;
     }
@@ -186,7 +186,7 @@ function renderNotice(c, E) {
   if (!E) {
     h += `<div class="q"><label>신청 내용 확인</label></div>${summaryHtml(c)}`;
     h += `<label class="agree"><input type="checkbox" id="agree" ${st.agree ? "checked" : ""}> 유의사항을 모두 읽었고 동의합니다.</label>`;
-    if (st.prior) h += `<p class="banner-msg">이 기기에서 이미 제출한 신청(번호 <span class="prior-id">${esc(st.prior.id)}</span>)이 있어요. 다시 제출하면 이전 신청이 새 내용으로 바뀌어요.</p>`;
+    if (st.prior) h += `<p class="banner-msg">방금 제출한 신청(번호 <span class="prior-id">${esc(st.prior.id)}</span>)을 고치는 중이에요. 다시 제출하면 새 내용으로 바뀌어요.</p>`;
     if (st.submitErr) h += `<p class="err">${esc(st.submitErr)}</p>`;
   }
   h += `<div class="nav"><button class="btn ghost" data-act="prev">이전</button>${E ? "" : `<button class="btn" data-act="submit" ${(!st.agree || st.submitting) ? "disabled" : ""}>${st.submitting ? "제출 중…" : "제출하기"}</button>`}</div>`;
@@ -205,10 +205,11 @@ function summaryHtml(c) {
 function renderDone() {
   const r = st.result || {};
   return `<div class="done"><h2>${r.updated ? "신청 내용을 바꿨어요" : "신청이 접수됐어요"}</h2>
-    <p class="help" style="text-align:center">제출 번호 <span class="prior-id">${esc(r.id || "")}</span> · 수정이 필요하면 이 기기에서 다시 작성해 제출하면 돼요.</p>
+    <p class="help" style="text-align:center">제출 번호 <span class="prior-id">${esc(r.id || "")}</span></p>
+    <p class="help" style="text-align:center">개인정보 보호를 위해 입력한 내용은 이 기기에 남기지 않아요. 창을 닫거나 새로고침하면 지워져요.<br>나중에 고치고 싶다면 오픈채팅으로 제출 번호와 함께 알려 주세요.</p>
     ${linksIn(cfg.noticeText).map(u => `<a class="btn" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${/open\.kakao\.com/.test(u) ? "오픈채팅으로 연락하기" : "링크 열기"}</a><span class="help" style="user-select:all;overflow-wrap:anywhere">${esc(u)}</span>`).join("")}</div>
     ${summaryHtml(cfg)}
-    <div class="nav"><span></span><button class="btn ghost" data-act="restart">신청 내용 수정하기</button></div>`;
+    <div class="nav"><button class="btn ghost" data-act="clear-all">입력 내용 지우기</button><button class="btn ghost" data-act="restart">지금 바로 수정하기</button></div>`;
 }
 
 /* ---------- 관리자 화면 ---------- */
@@ -342,6 +343,7 @@ async function act(a, b) {
     case "minus": bumpQty(b.dataset.k, -1); return;
     case "submit": await submit(); return;
     case "restart": st.submitted = false; st.step = 0; st.agree = false; break;
+    case "clear-all": st.answers = {}; st.qty = {}; st.prior = null; st.result = null; st.submitted = false; st.step = 0; st.agree = false; st.errors = {}; toast("입력한 내용을 지웠어요"); break;
     /* 편집 */
     case "q-add": D.questions.push({ id: rid("q"), type: "text", label: "새 질문", help: "", required: false }); break;
     case "q-del": D.questions.splice(+b.dataset.i, 1); break;
@@ -384,7 +386,7 @@ async function act(a, b) {
     }
   }
   render();
-  if (a === "next" || a === "prev" || a === "restart") document.querySelector(".steps")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (a === "next" || a === "prev" || a === "restart" || a === "clear-all") document.querySelector(".steps")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function submit() {
@@ -394,7 +396,6 @@ async function submit() {
     const r = await api("submit", { answers: st.answers, qty, editId: st.prior?.id, editKey: st.prior?.editKey });
     st.result = r; st.submitted = true;
     st.prior = { id: r.id, editKey: r.editKey };
-    lsSet(LS_SUB, { id: r.id, editKey: r.editKey, answers: st.answers, qty: st.qty });
   } catch (e) { st.submitErr = errMsg(e); }
   st.submitting = false; render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -460,6 +461,12 @@ $("filePick").addEventListener("change", async e => {
   } catch (err) { toast(errMsg(err)); }
 });
 
+/* 작은 사진(images/thumbs)이 없으면 큰 사진으로 대신 보여 줍니다 */
+document.addEventListener("error", e => {
+  const t = e.target;
+  if (t && t.tagName === "IMG" && t.dataset.fb) { const fb = t.dataset.fb; delete t.dataset.fb; if (fb && t.getAttribute("src") !== fb) t.src = fb; }
+}, true);
+
 /* ---------- 사진 크게 보기 ---------- */
 let lbReturn = null;
 const lb = $("lb");
@@ -481,8 +488,8 @@ async function boot() {
   remoteMissing = !!API && !remote;
   cfg = remote || await local;
   if (!cfg) { $("app").innerHTML = `<div class="sheet loading">폼을 불러오지 못했어요. 새로고침해 주세요.</div>`; return; }
-  const prior = lsGet(LS_SUB);
-  if (prior && prior.id) { st.prior = { id: prior.id, editKey: prior.editKey }; if (prior.answers) st.answers = { ...prior.answers }; if (prior.qty) st.qty = { ...prior.qty }; }
+  // 제출 내용은 기기에 남기지 않아요. 예전 버전이 남긴 기록도 지웁니다.
+  try { localStorage.removeItem(LS_SUB); } catch (e) {}
   try { const t = sessionStorage.getItem(SS_TOKEN); if (t && Number(t.split(".")[0]) > Date.now()) { adm.token = t; adm.unlocked = true; adm.open = true; } } catch (e) {}
   render();
   if (!API) toast("아직 서버가 연결되지 않아 제출이 되지 않아요.");
