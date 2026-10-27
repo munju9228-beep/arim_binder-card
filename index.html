@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>바인더 대지 소분폼</title>
+<meta name="description" content="바인더 대지 소분 참여 신청 폼">
+<meta property="og:title" content="바인더 대지 소분폼">
+<meta property="og:description" content="바인더 대지 소분 참여 신청 폼">
+<meta name="theme-color" content="#F8BFD5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap" id="app"><div class="sheet loading">폼을 불러오는 중이에요…</div></div>
+<input type="file" id="filePick" accept="image/*" hidden>
+<div class="toast" id="toast" hidden></div>
+<div id="lb" hidden role="dialog" aria-modal="true" aria-label="사진 크게 보기"><button class="x" id="lb-x">닫기</button><img id="lb-img" alt=""><div class="cap" id="lb-cap"></div></div>
+<script src="settings.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
